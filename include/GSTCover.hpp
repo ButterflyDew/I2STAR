@@ -26,8 +26,18 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
     if(query[0].size() == 0) return answer;
     
     Log::debug("g[0] size: " + to_string(query[0].size()));
-
     int n = graph.get_n();
+    
+    vector <int> cover_weight(n + 1, 0);
+    for(int i = 0; i < g; i++)
+    {
+        for(auto x : query[i])
+            cover_weight[x] ++;
+    }
+    sort(query[0].begin(), query[0].end(), [&](int i, int j){return cover_weight[i] > cover_weight[j];});
+    if(cover_weight[query[0][0]] == g) return Tree<edgetype>(0);
+
+    
     vector <vector <edgetype> > dist(g, vector <edgetype> (n + 1, INF));
     vector <vector <int> > prev(g, vector <int> (n + 1, -1));
     vector<vector<int>> LS(n + 1, vector<int>(g));
@@ -90,7 +100,7 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
 
     for(auto r: query[0])
     {
-        Log::debug("r: " + to_string(r));
+        //Log::debug("r: " + to_string(r));
         Tree<edgetype> now_answer;
                 
         vector <edgetype> dis(n + 1, INF);
@@ -155,15 +165,15 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
 
         while(current_cover < g)
         {
-            Log::debug("current_cover: " + to_string(current_cover));
+            //Log::debug("current_cover: " + to_string(current_cover));
             if(heap.empty())
                 break;
             auto [val, pres, c, isreal] = heap.top();
-            Log::debug("c: " + to_string(c) + " val: " + to_string(val) + " pres: " + to_string(pres) + " isreal: " + to_string(isreal));
+            //Log::debug("c: " + to_string(c) + " val: " + to_string(val) + " pres: " + to_string(pres) + " isreal: " + to_string(isreal));
             int cover_cnt = 0;
             for(int i = 1; i <= pres; i++) if(is_cover[LS[c][i]]==0)
                 cover_cnt++;
-            Log::debug("Is cover all: " + std::string((cover_cnt == pres_cnt[c]) ? "1" : "0"));
+            //Log::debug("Is cover all: " + std::string((cover_cnt == pres_cnt[c]) ? "1" : "0"));
             if(cover_cnt == pres_cnt[c])
             {
                 if(isreal)
@@ -188,7 +198,7 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
                 {
                     if(pre[c] == -1)
                         run_dijkstra(c);
-                    Log::debug("run_dijkstra done");
+                    //Log::debug("run_dijkstra done");
                     nodes[c].isreal = 1;
                 }
             }
@@ -196,7 +206,7 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
             nodes[c].pres = 0;
             pres_cnt[c] = 0;
             int pres_cnt_now = 0;
-            Log::debug("Before updata");
+            //Log::debug("Before updata");
             for(int i = 1; i < g; i++)
             {
                 if(is_cover[LS[c][i]]) continue;
@@ -210,7 +220,7 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
                     pres_cnt[c] = pres_cnt_now;
                 }
             }
-            Log::debug("Before modify");
+            //Log::debug("Before modify");
             if(nodes[c].pres != 0)
                 heap.modify(c, nodes[c]);
             else
@@ -266,8 +276,8 @@ Tree<edgetype> gst_cover(const Graph<edgetype>& graph, vector<vector<int>>& quer
         };  
         delete_leave();
 
-        Log::debug("weight: " + to_string(now_answer.get_sum_weight()));
-        Log::debug("current_cover: " + to_string(current_cover));
+        //Log::debug("weight: " + to_string(now_answer.get_sum_weight()));
+        //Log::debug("current_cover: " + to_string(current_cover));
         if(current_cover == g && now_answer.get_sum_weight() < answer.get_sum_weight())
             answer = now_answer;
     }

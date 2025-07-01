@@ -43,6 +43,7 @@ Graph<edgetype>::Graph() {
     for(int i = 1; i <= n; i++)
         f[i] = i;
 
+    int cnt0 = 0;
     for (int i = 0; i < m; ++i) {
         int u, v;
         edgetype w;
@@ -52,6 +53,7 @@ Graph<edgetype>::Graph() {
         adj[u].emplace_back(v, w);
         adj[v].emplace_back(u, w);
         edge_map[{min(u, v), max(u, v)}] = w;
+        if(w == 0) cnt0++;
         Union(u, v);
     }
 
@@ -60,4 +62,5 @@ Graph<edgetype>::Graph() {
         if(Find(i) == i)
             cnt++;
     Log::info("Graph has " + to_string(cnt) + " connected components");
+    Log::info("Graph has " + to_string(cnt0) + " edges with weight 0");
 } 

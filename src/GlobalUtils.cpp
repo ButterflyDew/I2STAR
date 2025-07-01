@@ -24,14 +24,14 @@ vector<vector<vector<int>>> read_query_file()
         vector<vector<int>> query;
         for (int j = 0; j < g; ++j) 
         {
-            int s; fin >> s;
-            vector<int> group(s);
+            int s,v; fin >> s;
+            set <int> group;
             for (int k = 0; k < s; ++k) 
             {
-                fin >> group[k];
-                group[k] += index_offset;
+                fin >> v;
+                group.insert(v + index_offset);
             }
-            query.push_back(group);
+            query.push_back(vector<int>(group.begin(), group.end()));
         }
         all_queries.push_back(query);
     }
