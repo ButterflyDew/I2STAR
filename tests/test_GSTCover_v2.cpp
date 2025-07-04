@@ -1,7 +1,7 @@
 #include "../include/Graph.hpp"
 #include "../include/Log.hpp"
 #include "../include/GlobalUtils.hpp"
-#include "../include/GSTCover.hpp"
+#include "../include/GSTCover_v2.hpp"
 #include <iostream>
 using namespace std;
 
@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
     }
     Log::setLogFile("log_" + string(argv[1]) + ".txt");
     Log::setConsoleLevel(LogLevel::LOG_INFO);   
-    Log::setFileLevel(LogLevel::LOG_INFO);   
+    Log::setFileLevel(LogLevel::LOG_IMPORTANT);   
 
     string graphname = argv[1];
     string dirname = "data/" + graphname + "/";
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     Log::debug("Loaded everything");
     for(int i = 0; i < (int)query.size(); i++)
     {
-        if(i != 0 && i != 1) continue;
+        // if(i != 0 && i != 1) continue;
         //if(i != 8) continue;
         int gsize = query[i].size();
         map <int, vector <vector<int>>> query_new;
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
         Tree<double> t(numeric_limits<double>::max());
         for(auto [_, qn]: query_new)
         {
-            auto tn = gst_cover(g, qn);
+            auto tn = gst_cover_v2(g, qn);
             if(tn.get_sum_weight() < t.get_sum_weight())
                 t = tn;
         }
@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
         Log::log(LogLevel::LOG_INFO, "Time: " + to_string(duration) + "s" + " sum_weight: " + to_string(sum_weight));
         Log::log(LogLevel::LOG_IMPORTANT, to_string(duration) + " " + to_string(sum_weight));
 
+        system("pause");
     }
     
     return 0;

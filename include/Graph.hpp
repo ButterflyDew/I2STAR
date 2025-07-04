@@ -23,11 +23,14 @@ public:
     const map<pair<int, int>, edgetype>& get_edge_map() const { return edge_map; }
     int Find(int x) { return f[x] == x ? x : f[x] = Find(f[x]); }
     void Union(int x, int y) { f[Find(x)] = Find(y); }
+    edgetype get_max_weight() const { return max_weight; }
+    edgetype get_min_weight() const { return min_weight; }
     // 其他方法如：加边、查边等
 private:
     int n, m;
     vector<vector<pair<int, edgetype>>> adj; // 邻接表
     map<pair<int, int>, edgetype> edge_map;  // 点对到边权
+    edgetype max_weight, min_weight;
     vector<int> f;
 };
 
@@ -44,10 +47,18 @@ Graph<edgetype>::Graph() {
         f[i] = i;
 
     int cnt0 = 0;
+
+    max_weight = 0, min_weight = numeric_limits<edgetype>::max();
+
     for (int i = 0; i < m; ++i) {
         int u, v;
         edgetype w;
         fin >> u >> v >> w;
+        if(w != 0)
+        {
+            max_weight = max(max_weight, w);
+            min_weight = min(min_weight, w);
+        }
         u += index_offset;
         v += index_offset;
         adj[u].emplace_back(v, w);
@@ -63,4 +74,5 @@ Graph<edgetype>::Graph() {
             cnt++;
     Log::info("Graph has " + to_string(cnt) + " connected components");
     Log::info("Graph has " + to_string(cnt0) + " edges with weight 0");
+    Log::info("max_weight: " + to_string(max_weight) + " min_weight: " + to_string(min_weight));
 } 

@@ -73,6 +73,7 @@ public:
         }
     }
     const map<pair<int, int>, edgetype>& get_edges() const { return edges; }
+    int get_size() const { return edges.size(); }
     edgetype get_sum_weight() const { return sum_weight; }
 private:
     edgetype sum_weight;
