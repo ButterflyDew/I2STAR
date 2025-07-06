@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         Log::log(LogLevel::LOG_INFO, "Time: " + to_string(duration) + "s" + " sum_weight: " + to_string(sum_weight));
         Log::log(LogLevel::LOG_IMPORTANT, to_string(duration) + " " + to_string(sum_weight));
 
-        system("pause");
+        //system("pause");
     }
     
     return 0;
