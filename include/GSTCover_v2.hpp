@@ -117,20 +117,25 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
 
     Log::debug("g : " + to_string(g));
 
-    vector <vector <pair<edgetype, int> > > dis_need_more(g, vector <pair<edgetype, int> > (n + 1, {INF, 0}));
-    vector <vector <edgetype> > dis_need_more_val(g, vector <edgetype> (n + 1, INF));
+    vector <edgetype> dis_allowed_mx(g, 0);
+    // vector <pair <edgetype, int> > cost_list(1);
     edgetype min_full_cover = INF;
-    auto calc_dis_need_more = [&]()
+    auto calc_min_full_cover = [&]()
     {
-        for(int i = 1; i <= n; i++) {
-            edgetype sum = dist[0][i];
-            for(int j = 1; j <= g - 1; j++) {
-                int qid = LS[i][j];
-                sum += dist[qid][i];
-            }
+        for(int i = 1; i <= n; i++) 
+        {
+            edgetype sum = 0;
+            for(int j = 0; j <= g - 1; j++) 
+                sum += dist[LS[i][j]][i];
             min_full_cover = min(min_full_cover, sum / (g - 1));
         }
         Log::info("min_full_cover: " + to_string(min_full_cover));
+    };
+    calc_min_full_cover();
+
+    auto calc_dis_allowed_mx = [&]()
+    {
+        dis_allowed_mx = vector<edgetype>(g, 0);
         for(int i = 1; i <= n; i++) 
         {
             vector <edgetype> sum_rig(g, dist[0][i]);
@@ -149,18 +154,13 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             for(int j = cur; j <= g - 1; j++)
                 sum_rig[j] = min_full_cover*j*(g - 1) - now_sum;
             for(int j = 1; j <= g - 1; j++)
-            {
-                dis_need_more[j][i] = {sum_rig[j], i};
-                dis_need_more_val[j][i] = sum_rig[j];
-            }
+                dis_allowed_mx[j] = max(dis_allowed_mx[j], sum_rig[j]);
         }
-        for(int i = 1; i <= g - 1; i++)
-            sort(dis_need_more[i].begin(), dis_need_more[i].end());
     };
-    calc_dis_need_more();
+    calc_dis_allowed_mx();
+    int recalc_cnt = 0;
 
     double average_point_ratio_0 = 0, average_point_ratio_all = 0, average_cur_queue = 0;
-    double cut_by_full_cnt = 0, cut_sum_cnt = 0;
     vector<int> cur_queue_cnt(g, 0), dijk_rk(n + 1, 0);
     double dijk_rk_sum = 0;
     int dijk_rk_cnt = 0;
@@ -218,32 +218,31 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             }
         };
 
-        vector <int> dijk_cnt(g, 0), ok_cnt(g, 0), dis_pos(g, 0);
+        vector <int> dis_pos(g, 0);
+        int cut_by_queue = 0, las_cur_queue = 0;
     
         auto run_dijkstra = [&]()
         {
             auto modi_u = [&](int u)
             {
-                if(dis[u] < dis_need_more_val[cur_queue][u])
-                    dijk_cnt[cur_queue]++;
-                while(dis_pos[cur_queue] < n && dis_need_more[cur_queue][dis_pos[cur_queue]].first < dis[u])
-                {
-                    auto [du, uid] = dis_need_more[cur_queue][dis_pos[cur_queue]];
-                    if(dis[uid] < du)
-                        ok_cnt[cur_queue]++;
+                while(dis_pos[cur_queue] < n && dis_allowed_mx[cur_queue] < dis[u])
                     dis_pos[cur_queue]++;
-                }   
             };
 
-            for(auto u : useful_points)
-                modi_u(u);
-            if(ok_cnt[cur_queue] >= n - dis_pos[cur_queue] + dijk_cnt[cur_queue])
+            if(cur_queue != las_cur_queue)
             {
-                cut_sum_cnt += 1;
-                if(dis_pos[cur_queue] == n)
-                    cut_by_full_cnt += 1;
+                for(auto u : useful_points)
+                    modi_u(u);
+                las_cur_queue = cur_queue;
+            }
+            
+            if(dis_pos[cur_queue] == n)
+            {
+                cut_by_queue = 1;
                 return;
             }
+
+            int dijk_cnt_now = 0;
 
             while(!pq.empty())
             {
@@ -253,21 +252,23 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
 
                 add_point(u);
                 modi_u(u);
-                
+                dijk_cnt_now++;
+
                 for(auto [v, w] : graph.get_adj()[u])
                 {
                     if(dis[v] > dis[u] + w)
                         dis[v] = dis[u] + w, pre[v] = u, pq.push({dis[v], v});
                 }
                 
-                if(ok_cnt[cur_queue] >= n - dis_pos[cur_queue] + dijk_cnt[cur_queue])
+                if(dis_pos[cur_queue] == n)
                 {
-                    cut_sum_cnt += 1;
-                    if(dis_pos[cur_queue] == n)
-                        cut_by_full_cnt += 1;
+                    cut_by_queue = 1;
                     return;
                 }
+                if(dijk_cnt_now >= 1.0*n/100)
+                    return;
             }
+            cut_by_queue = 1;
         };        
         run_dijkstra();
 
@@ -309,12 +310,11 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                         fine = 0;
                         break;
                     }
-                    // if(dis_pos[cur_queue] == n)
-                    // {
-                    //     //fine = 0;
-                    //     break;
-                    // }
-                    cur_queue++;
+                    if(cut_by_queue)
+                    {
+                        cut_by_queue = 0;
+                        cur_queue++;
+                    }
                     run_dijkstra();
                 }
                 else
@@ -433,6 +433,18 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             now_min_ans = now_answer.get_sum_weight();
             answer = now_answer;
         }
+
+        // if(recalc_cnt == 0 && now_min_ans < min_full_cover*(g - 1))
+        // {
+        //     recalc_cnt = 1;
+        //     min_full_cover = now_min_ans / (g - 1);
+        //     Log::info("new_min_full_cover: " + to_string(min_full_cover));
+        //     auto las = dis_allowed_mx;
+        //     calc_dis_allowed_mx();
+        //     for(int i = 0; i < g; i++)
+        //         assert(dis_allowed_mx[i] <= las[i]);
+        //     dis_allowed_mx[1] = las[1];
+        // }
     }
     Timer::stop("MAIN", LogLevel::LOG_INFO, 1);
     Log::debug("n: " + to_string(n) + " g: " + to_string(g));
@@ -440,7 +452,6 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     Log::info("average_point_ratio_0: " + to_string(average_point_ratio_0 / query[0].size()));
     Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
     Log::info("average_cur_queue: " + to_string(average_cur_queue / query[0].size()));
-    Log::info("cut_by_full_ratio: " + to_string(cut_by_full_cnt / cut_sum_cnt));
     Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
     for(int i = 0; i < g; i++)
         Log::info("cur_queue_cnt[" + to_string(i) + "]: " + to_string(cur_queue_cnt[i]));
