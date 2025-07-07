@@ -216,7 +216,31 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         
         query_cover[0] = 1;
         int current_cover = 1;
+
+        edgetype now_rig_mx = min_full_cover, now_dijk_mx = 0;
+        int now_dis_allowed_cur = start_cur;
         
+        auto updata_dis_allowed_mx = [&]()
+        {
+            while(now_dis_allowed_cur + 1 < (int)cost_list.size() && cost_list[now_dis_allowed_cur + 1].first <= now_rig_mx)
+                now_dis_allowed_cur++;
+            for(int i = 1; i <= g - 1; i++)
+                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[now_dis_allowed_cur][i]);
+        };
+        updata_dis_allowed_mx();
+
+        pair<edgetype, int> chs = {INF, -1};
+        auto find_dis_allowed_mx = [&]()
+        {
+            now_rig_mx = chs.first;
+            int it = lower_bound(cost_list.begin() + 1, cost_list.end(), now_rig_mx, [&](auto x, auto y){return x.first < y;}) - cost_list.begin() - 1;
+            now_dijk_mx = 0;
+            it = max(1, it);
+            for(int i = 1; i <= g - 1; i++)
+                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[it][i]);
+        };
+
+        int fisrt_add = 1;
         auto add_point = [&](int u)
         {
             useful_points.push_back(u);
@@ -246,19 +270,16 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                         break;
                 }
             }
+
+            if(fisrt_add) return;
+
+            if(sum[u] / prev_uncover[u] < chs.first)
+            {
+                chs = {sum[u] / prev_uncover[u], u};
+                find_dis_allowed_mx();
+            }
         };
 
-        edgetype now_rig_mx = min_full_cover, now_dijk_mx = 0;
-        int now_dis_allowed_cur = start_cur;
-        auto updata_dis_allowed_mx = [&]()
-        {
-            while(now_dis_allowed_cur + 1 < (int)cost_list.size() && cost_list[now_dis_allowed_cur + 1].first <= now_rig_mx)
-                now_dis_allowed_cur++;
-            for(int i = 1; i <= g - 1; i++)
-                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[now_dis_allowed_cur][i]);
-        };
-        updata_dis_allowed_mx();
-    
         auto run_dijkstra = [&]()
         {
             while(!pq.empty())
@@ -279,6 +300,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             }
         };        
         run_dijkstra();
+        fisrt_add = 0;
 
         average_point_ratio_0 += useful_points.size() * 1.0 / n;
         
@@ -290,26 +312,21 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
 
         while(current_cover != g) 
         {
-            pair<edgetype, int> chs = {INF, -1};
-            int las_cur = 0;
-            while(true)
+            chs = {INF, -1};
+            for(auto u : useful_points)
             {
-                while(las_cur < (int)useful_points.size())
-                {
-                    chs = min(chs, {sum[useful_points[las_cur]] / prev_uncover[useful_points[las_cur]], useful_points[las_cur]});
-                    las_cur++;
-                }
-                if(chs.first > now_rig_mx)
-                {
-                    now_rig_mx = chs.first;
-                    updata_dis_allowed_mx();
-                    run_dijkstra();
-                }
-                else
-                    break;
+                if(sum[u] / prev_uncover[u] < chs.first)
+                    chs = {sum[u] / prev_uncover[u], u};
             }
+            find_dis_allowed_mx();
 
-            if(!fine) break;
+            run_dijkstra();
+
+            if(now_sum_weight + chs.first * (g - current_cover) > now_min_ans)
+            {
+                fine = 0;
+                break;
+            }
 
             now_sum_weight += chs.first;
             int c = chs.second;
@@ -433,8 +450,8 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     }
 
 
-    // Log::debug("n: " + to_string(n) + " g: " + to_string(g));
-    // Log::debug("query[0].size(): " + to_string(query[0].size()));
+    Log::debug("n: " + to_string(n) + " g: " + to_string(g));
+    Log::debug("query[0].size(): " + to_string(query[0].size()));
     // Log::info("average_point_ratio_0: " + to_string(average_point_ratio_0 / query[0].size()));
     // Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
     // Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
