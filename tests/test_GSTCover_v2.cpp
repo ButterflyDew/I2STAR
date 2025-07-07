@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
         cout << "Usage: " << argv[0] << " <graphname>\nExample: " << argv[0] << " Toronto" << endl;
         return 1;
     }
-    Log::setLogFile("log_" + string(argv[1]) + ".txt");
+    Log::setLogFile("log_" + string(argv[1]) + "_v2.txt");
     Log::setConsoleLevel(LogLevel::LOG_INFO);   
     Log::setFileLevel(LogLevel::LOG_IMPORTANT);   
 
