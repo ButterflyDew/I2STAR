@@ -13,15 +13,15 @@ template<typename edgetype>
 Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& query) {
     Log::debug("GSTCover start");
     
-    // Timer::start("initialize");
-    // Timer::start("initialize part 1");
+    Timer::start("initialize");
+    Timer::start("initialize part 1");
     
     edgetype INF = numeric_limits<edgetype>::max();
     Tree<edgetype> answer(INF);
     
     int g = query.size();
     if(g == 1) return Tree<edgetype>(0);
-    vector <vector <pair <edgetype, int> > > cost_list_2(g*(g + 1)/2 + 1, vector <pair <edgetype, int> >(1)), cost_list_1(g + 1, vector <pair <edgetype, int> >(1));
+    vector <vector <pair <edgetype, int> > > cost_list_1(g + 1, vector <pair <edgetype, int> >(1));
     for(int i = 1; i < g; i++)
     if(query[i].size() < query[0].size())
     swap(query[i], query[0]);
@@ -105,14 +105,14 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         }
     };
 
-    // Timer::start("calc_dist");
+    Timer::start("calc_dist");
     calc_dist();
-    // Timer::stop("calc_dist", LogLevel::LOG_INFO);
+    Timer::stop("calc_dist", LogLevel::LOG_INFO);
     
-    // Timer::stop("initialize part 1", LogLevel::LOG_INFO);
+    Timer::stop("initialize part 1", LogLevel::LOG_INFO);
     
     
-    // Timer::start("initalize part 2");
+    Timer::start("initalize part 2");
     vector<vector<int>> rk(n + 1, vector<int>(g));
     for(int c = 1; c <= n; c++)
     {
@@ -155,15 +155,15 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     };
     calc_min_full_cover();
     
-    // Timer::stop("initalize part 2", LogLevel::LOG_INFO);
+    Timer::stop("initalize part 2", LogLevel::LOG_INFO);
     
-    // Timer::start("initalize part 3");
+    Timer::start("initalize part 3");
 
     vector <pair<edgetype, int> > cost_list(1);
-    vector <array<edgetype, 10> > dis_allowed_mx;
+    vector < vector <edgetype> > dis_allowed_mx(g + 1);
 
     vector <edgetype> dis_allowed_mx_1(g + 1, INF);
-    vector <vector <pair <edgetype, edgetype> > > dis_allowed_mx_2(g*(g + 1)/2 + 1);
+    vector <vector <array<edgetype, 3> > > dis_allowed_mx_2(g*(g + 1)/2 + 1);
     vector <vector <int> > idx(g + 1, vector <int>(g + 1, 0));
     vector <pair<int, int> > f_idx(g*(g + 1)/2 + 1, {0, 0});
     int idx_cnt = 0;
@@ -173,54 +173,55 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     auto build_list_2 = [&](int i)
     {
         auto [u, v] = f_idx[i];
-        auto Merge_sort = [&]()
+        int p1 = 1, p2 = 1;
+        int len1 = cost_list_1[u].size(), len2 = cost_list_1[v].size();
+        auto Merge_sort_next = [&]()
         {
-            int p1 = 1, p2 = 1;
-            int len1 = cost_list_1[u].size(), len2 = cost_list_1[v].size();
-            while(p1 < len1 && p2 < len2)
+            if(p1 < len1 && p2 < len2)
             {
                 if(cost_list_1[u][p1].first < cost_list_1[v][p2].first)
-                {
-                    cost_list_2[i].push_back(cost_list_1[u][p1]);
-                    p1++;
-                }
+                    return cost_list_1[u][p1++];
                 else
-                {
-                    cost_list_2[i].push_back(cost_list_1[v][p2]);
-                    p2++;
-                }
+                    return cost_list_1[v][p2++];
             }
-            while(p1 < len1)
-            {
-                cost_list_2[i].push_back(cost_list_1[u][p1]);
-                p1++;
-            }
-            while(p2 < len2)
-            {
-                cost_list_2[i].push_back(cost_list_1[v][p2]);
-                p2++;
-            }
+            if(p1 < len1) return cost_list_1[u][p1++];
+            if(p2 < len2) return cost_list_1[v][p2++];
+            assert(0);
         };
-        Merge_sort();
         
-        int len = cost_list_2[i].size();
-        dis_allowed_mx_2[i].resize(cost_list_2[i].size());
+        int len = len1 + len2 - 2;
         vector <pair<edgetype, int> > pre_info(n + 1);
         pair <edgetype, edgetype> mi_2 = {INF, INF};
 
-        for(int j = 1; j < len; j++)
+        for(int j = 1; j <= len; j++)
         {
-            auto [cost, u] = cost_list_2[i][j];
+            auto [cost, u] = Merge_sort_next();
             pre_info[u].first += cost;
             pre_info[u].second++;
-            if(pre_info[u].second == 1) mi_2.first = min(mi_2.first, pre_info[u].first);
-            else mi_2.second = min(mi_2.second, pre_info[u].first);
-            dis_allowed_mx_2[i][j] = mi_2;
+            int updated = 0;
+            if(pre_info[u].second == 1) 
+            {
+                if(mi_2.first > pre_info[u].first)
+                {
+                    mi_2.first = pre_info[u].first;
+                    updated = 1;
+                }
+            }
+            else
+            {
+                if(mi_2.second > pre_info[u].first)
+                {
+                    mi_2.second = pre_info[u].first;
+                    updated = 1;
+                }
+            }
+            if(updated)
+                dis_allowed_mx_2[i].push_back({cost, mi_2.first, mi_2.second});
         }
     };
     
     
-    int start_cur = 0;
+    edgetype start_dijk = 0;
     auto calc_dis_allowed_mx = [&]()
     {
         for(int i = 1; i <= n; i++) 
@@ -257,40 +258,44 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                 ins(i);
             }
         };
-        // Timer::start("Build_cost_list");
+        Timer::start("Build_cost_list");
         Build_cost_list();
-        // Timer::stop("Build_cost_list", LogLevel::LOG_INFO);
+        Timer::stop("Build_cost_list", LogLevel::LOG_INFO);
 
-        // Timer::start("aft");
+        Timer::start("aft");
         
         int len = cost_list.size();
-        dis_allowed_mx.resize(len);
-        
 
         array<edgetype, 10> now_mi;
         vector <pair<edgetype, int> > pre_info(n + 1);
 
         for(int i = 0; i <= g - 1; i++) now_mi[i] = INF;
 
-        int useful = 0;
 
         for(int i = 1; i < len; i++)
         {
             auto [cost, u] = cost_list[i];
             pre_info[u].first += cost;
             pre_info[u].second++;
-            if(now_mi[pre_info[u].second] > pre_info[u].first) useful++;
-            now_mi[pre_info[u].second] = min(now_mi[pre_info[u].second], pre_info[u].first);
-            dis_allowed_mx[i] = now_mi;
-            if(cost < min_full_cover)
-                start_cur = i;
+            if(now_mi[pre_info[u].second] > pre_info[u].first) 
+            {
+                now_mi[pre_info[u].second] = pre_info[u].first;
+                dis_allowed_mx[0].push_back(cost);
+                for(int j = 1; j <= g - 1; j++)
+                    dis_allowed_mx[j].push_back(now_mi[j]);
+                if(cost < min_full_cover)
+                {
+                    start_dijk = 0;
+                    for(int j = 1; j <= g - 1; j++)
+                        start_dijk = max(start_dijk, min_full_cover*j - dis_allowed_mx[j].back());
+                }    
+            }
         }
-        // cout << "useful : " << useful << endl;
-        // Timer::stop("aft", LogLevel::LOG_INFO);
+        Timer::stop("aft", LogLevel::LOG_INFO);
     };
     calc_dis_allowed_mx();
     
-    // Timer::stop("initalize part 3", LogLevel::LOG_INFO);
+    Timer::stop("initalize part 3", LogLevel::LOG_INFO);
     
     double average_point_ratio_0 = 0, average_point_ratio_all = 0;
     vector<int> dijk_rk(n + 1, 0);
@@ -313,7 +318,9 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         return true; 
     };
 
-    // Timer::stop("initialize", LogLevel::LOG_INFO);
+    Timer::stop("initialize", LogLevel::LOG_INFO);
+
+    Timer::start("MAIN");
 
     for(auto r: query[0])
     {
@@ -335,22 +342,12 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         query_cover[0] = 1;
         int current_cover = 1;
 
-        edgetype now_rig_mx = min_full_cover, now_dijk_mx = 0;
-        int now_dis_allowed_cur = start_cur;
-        
-        auto updata_dis_allowed_mx = [&]()
-        {
-            while(now_dis_allowed_cur + 1 < (int)cost_list.size() && cost_list[now_dis_allowed_cur + 1].first <= now_rig_mx)
-                now_dis_allowed_cur++;
-            for(int i = 1; i <= g - 1; i++)
-                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[now_dis_allowed_cur][i]);
-        };
-        updata_dis_allowed_mx();
+        edgetype now_dijk_mx = start_dijk;
 
         pair<edgetype, int> chs = {INF, -1};
         auto find_dis_allowed_mx = [&]()
         {
-            now_rig_mx = chs.first;
+            edgetype now_rig_mx = chs.first;
             if(current_cover == g - 1)
             {
                 now_dijk_mx = now_rig_mx - dis_allowed_mx_1[res_uncover];
@@ -363,16 +360,18 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                     used_idx[res_uncover_2] = 1;
                     build_list_2(res_uncover_2);
                 }
-                int it = lower_bound(cost_list_2[res_uncover_2].begin() + 1, cost_list_2[res_uncover_2].end(), now_rig_mx, [&](auto x, auto y){return x.first < y;}) - cost_list_2[res_uncover_2].begin() - 1;
-                it = max(1, it);
-                now_dijk_mx = max(now_rig_mx - dis_allowed_mx_2[res_uncover_2][it].first, now_rig_mx*2 - dis_allowed_mx_2[res_uncover_2][it].second);
+                int it = lower_bound(dis_allowed_mx_2[res_uncover_2].begin(), dis_allowed_mx_2[res_uncover_2].end(), now_rig_mx, 
+                [&](auto x, auto y){return x[0] < y;}) - dis_allowed_mx_2[res_uncover_2].begin() - 1;
+                it = max(0, it);
+                now_dijk_mx = max(now_rig_mx - dis_allowed_mx_2[res_uncover_2][it][1], now_rig_mx*2 - dis_allowed_mx_2[res_uncover_2][it][2]);
                 return;
             }
-            int it = lower_bound(cost_list.begin() + 1, cost_list.end(), now_rig_mx, [&](auto x, auto y){return x.first < y;}) - cost_list.begin() - 1;
+
+            int it = lower_bound(dis_allowed_mx[0].begin(), dis_allowed_mx[0].end(), now_rig_mx, [&](auto x, auto y){return x < y;}) - dis_allowed_mx[0].begin() - 1;
             now_dijk_mx = 0;
-            it = max(1, it);
-            for(int i = 1; i <= g - 1; i++)
-                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[it][i]);
+            it = max(0, it);
+            for(int i = 1; i <= g - 1 - current_cover; i++)
+                now_dijk_mx = max(now_dijk_mx, now_rig_mx*i - dis_allowed_mx[i][it]);
         };
 
         int fisrt_add = 1;
@@ -608,7 +607,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         };
         ck_no_mid_point();
     }
-    // Timer::stop("MAIN", LogLevel::LOG_INFO, 0);
+    Timer::stop("MAIN", LogLevel::LOG_INFO);
 
     if(now_min_ans > min_full_cover*(g - 1))
     {
@@ -621,15 +620,15 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     }
 
 
-    // Log::info("n: " + to_string(n) + " g: " + to_string(g));
+    Log::info("n: " + to_string(n) + " g: " + to_string(g));
     // Log::debug("query[0].size(): " + to_string(query[0].size()));
     // for(int i = 1; i <= g; i++)
     // {
     //     Log::info("cover_size_cnt[" + to_string(i) + "]: " + to_string(cover_size_cnt[i]));
     //     Log::info("cover_size_dijk[" + to_string(i) + "]: " + to_string(cover_size_dijk[i] / cover_size_cnt[i]));
     // }
-    // Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
-    // Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
+    Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
+    Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
     // int used_idx_cnt = 0;
     // for(int i = 1; i <= idx_cnt; i++)
     //     if(used_idx[i])

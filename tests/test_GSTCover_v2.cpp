@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
         cout << "Usage: " << argv[0] << " <graphname>\nExample: " << argv[0] << " Toronto" << endl;
         return 1;
     }
-    Log::setLogFile("log_" + string(argv[1]) + "_v5.txt");
+    Log::setLogFile("log_" + string(argv[1]) + "_v6.txt");
     Log::setConsoleLevel(LogLevel::LOG_INFO);   
     Log::setFileLevel(LogLevel::LOG_IMPORTANT);   
 
@@ -22,8 +22,6 @@ int main(int argc, char* argv[]) {
     Log::debug("Loaded everything");
     for(int i = 0; i < (int)query.size(); i++)
     {
-        // if(i != 0 && i != 1) continue;
-        // if(i != 8) continue;
         int gsize = query[i].size();
         map <int, vector <vector<int>>> query_new;
         for(int j = 0; j < gsize; j++)
