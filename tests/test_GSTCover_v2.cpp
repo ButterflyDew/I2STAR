@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < (int)query.size(); i++)
     {
         // if(i != 0 && i != 1) continue;
-        //if(i != 8) continue;
+        // if(i != 8) continue;
         int gsize = query[i].size();
         map <int, vector <vector<int>>> query_new;
         for(int j = 0; j < gsize; j++)

@@ -12,38 +12,45 @@ using namespace std;
 template<typename edgetype>
 Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& query) {
     Log::debug("GSTCover start");
-
+    
+    // Timer::start("initialize");
+    // Timer::start("initialize part 1");
+    
     edgetype INF = numeric_limits<edgetype>::max();
     Tree<edgetype> answer(INF);
-
+    
     int g = query.size();
     if(g == 1) return Tree<edgetype>(0);
+    vector <vector <pair <edgetype, int> > > cost_list_2(g*(g + 1)/2 + 1, vector <pair <edgetype, int> >(1)), cost_list_1(g + 1, vector <pair <edgetype, int> >(1));
     for(int i = 1; i < g; i++)
-        if(query[i].size() < query[0].size())
-            swap(query[i], query[0]);
-
+    if(query[i].size() < query[0].size())
+    swap(query[i], query[0]);
+    
     if(query[0].size() == 0) return answer;
     
     Log::debug("g[0] size: " + to_string(query[0].size()));
     int n = graph.get_n();
     //Log::info("n: " + to_string(n) + " g: " + to_string(g));
-
+    
     vector <int> cover_weight(n + 1, 0);
     for(int i = 0; i < g; i++)
     {
         for(auto x : query[i])
-            cover_weight[x] ++;
+        cover_weight[x] ++;
     }
     sort(query[0].begin(), query[0].end(), [&](int i, int j){return cover_weight[i] > cover_weight[j];});
     if(cover_weight[query[0][0]] == g) return Tree<edgetype>(0);
-
+    
     vector <vector <edgetype> > dist(g, vector <edgetype> (n + 1, INF));
     vector <vector <int> > prev(g, vector <int> (n + 1, -1));
     vector<vector<int>> LS(n + 1, vector<int>(g));
     for (auto& v : LS) iota(v.begin(), v.end(), 0);
     
     edgetype max_dis = 0, D = graph.get_min_weight();
-    vector <vector <pair <edgetype, int> > > parti_queue(n + 1);
+
+    // cout << "D : " << D << endl;
+    
+    vector <vector <pair <edgetype, int> > > parti_queue;
     int queue_cur = 0;
     auto reset_queue = [&]()
     {
@@ -68,32 +75,44 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         parti_queue[queue_cur].pop_back();
         return pair<edgetype, int>{d, u};
     };
-    
+
     auto calc_dist = [&]
-    {
+    {   
         for(int ki = 0; ki < g; ki++)
         {
+            vector<int> extended(n + 1);
+
             for(auto x : query[ki])
             dist[ki][x] = 0, enqueue(x, 0);
             while(!parti_empty())
             {
                 auto [d, u] = dequeue();
+                if(extended[u]) continue;
+                cost_list_1[ki].push_back({d, u});
+                extended[u] = 1;
                 max_dis = max(max_dis, d);
                 for(auto [v, w] : graph.get_adj()[u])
                 {
+                    if(dist[ki][v] / D > (dist[ki][u] + w) / D) 
+                        enqueue(v, w + dist[ki][u]);
+
                     if(dist[ki][v] > dist[ki][u] + w)
-                    dist[ki][v] = dist[ki][u] + w, prev[ki][v] = u, enqueue(v, dist[ki][v]);
+                        dist[ki][v] = dist[ki][u] + w, prev[ki][v] = u;
                 }
-            }
+            }   
+            // Log::info("parti_queue.size() : " + to_string(parti_queue.size()));
             reset_queue();
         }
     };
-    
-    Timer::start("calc_dist");
+
+    // Timer::start("calc_dist");
     calc_dist();
-    Log::debug("calc_dist done");
-    Timer::stop("calc_dist", LogLevel::LOG_INFO, 0);
+    // Timer::stop("calc_dist", LogLevel::LOG_INFO);
     
+    // Timer::stop("initialize part 1", LogLevel::LOG_INFO);
+    
+    
+    // Timer::start("initalize part 2");
     vector<vector<int>> rk(n + 1, vector<int>(g));
     for(int c = 1; c <= n; c++)
     {
@@ -102,21 +121,21 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             rk[c][LS[c][j]] = j;
         }
     }    
-
-    Log::debug("pres_info done");
-
+    
+    // Log::debug("pres_info done");
+    
     //for delete leave
     vector <vector<pair<int, edgetype>> > ed(n + 1);
     vector <int> deg(n + 1, 0);
     vector <vector <int> > cover_groups(n + 1);
     for(int i = 0; i < g; i++)
-        for(auto x : query[i])
-            cover_groups[x].push_back(i);
-
-    Timer::start("MAIN");
-
+    for(auto x : query[i])
+    cover_groups[x].push_back(i);
+    
+    // Timer::start("MAIN");
+    
     // Log::debug("g : " + to_string(g));
-
+    
     edgetype min_full_cover = INF;
     int min_full_cover_v = 0;
     auto calc_min_full_cover = [&]()
@@ -125,7 +144,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         {
             edgetype sum = 0;
             for(int j = 0; j <= g - 1; j++) 
-                sum += dist[LS[i][j]][i];
+            sum += dist[LS[i][j]][i];
             if(sum / (g - 1) < min_full_cover)
             {
                 min_full_cover = sum / (g - 1);
@@ -135,17 +154,21 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         // Log::info("min_full_cover: " + to_string(min_full_cover));
     };
     calc_min_full_cover();
+    
+    // Timer::stop("initalize part 2", LogLevel::LOG_INFO);
+    
+    // Timer::start("initalize part 3");
 
     vector <pair<edgetype, int> > cost_list(1);
-    vector <vector<edgetype> > dis_allowed_mx;
+    vector <array<edgetype, 10> > dis_allowed_mx;
+
     vector <edgetype> dis_allowed_mx_1(g + 1, INF);
-    vector <vector <pair <edgetype, int> > > cost_list_2(g*(g + 1)/2 + 1, vector <pair <edgetype, int> >(1)), cost_list_1(g + 1, vector <pair <edgetype, int> >(1));
     vector <vector <pair <edgetype, edgetype> > > dis_allowed_mx_2(g*(g + 1)/2 + 1);
     vector <vector <int> > idx(g + 1, vector <int>(g + 1, 0));
     vector <pair<int, int> > f_idx(g*(g + 1)/2 + 1, {0, 0});
     int idx_cnt = 0;
     for(int i = 1; i <= g; i++) for(int j = i + 1; j <= g; j++)
-        idx[j][i] = idx[i][j] = ++idx_cnt, f_idx[idx_cnt] = {i, j};
+    idx[j][i] = idx[i][j] = ++idx_cnt, f_idx[idx_cnt] = {i, j};
     vector <int> used_idx(idx_cnt + 1, 0);
     auto build_list_2 = [&](int i)
     {
@@ -179,35 +202,24 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             }
         };
         Merge_sort();
-
+        
         int len = cost_list_2[i].size();
         dis_allowed_mx_2[i].resize(cost_list_2[i].size());
-        vector <pair<edgetype, int> > stk_1;
-        vector <edgetype> weight_1(n + 1, 0);
-        int stk_1_cnt = 0;
-        vector <int> cnt_u(n + 1, 0);
-        edgetype mi_2 = INF;
+        vector <pair<edgetype, int> > pre_info(n + 1);
+        pair <edgetype, edgetype> mi_2 = {INF, INF};
+
         for(int j = 1; j < len; j++)
         {
             auto [cost, u] = cost_list_2[i][j];
-            if(cnt_u[u] == 0)
-            {
-                cnt_u[u] = 1;
-                weight_1[u] = cost;
-                stk_1.push_back({cost, u});
-            }
-            else
-            {
-                cnt_u[u]++;
-                mi_2 = min(mi_2, cost + weight_1[u]);
-            }
-            while(stk_1_cnt < (int)stk_1.size() && cnt_u[stk_1[stk_1_cnt].second] == 1)
-                stk_1_cnt++;
-            dis_allowed_mx_2[i][j] = {stk_1_cnt == (int)stk_1.size() ? INF : stk_1[stk_1_cnt].first, mi_2};
+            pre_info[u].first += cost;
+            pre_info[u].second++;
+            if(pre_info[u].second == 1) mi_2.first = min(mi_2.first, pre_info[u].first);
+            else mi_2.second = min(mi_2.second, pre_info[u].first);
+            dis_allowed_mx_2[i][j] = mi_2;
         }
     };
-
-
+    
+    
     int start_cur = 0;
     auto calc_dis_allowed_mx = [&]()
     {
@@ -216,52 +228,77 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
             {
                 if(dist[LS[i][j]][i] > min_full_cover*(g - 1))
                     break;
-                cost_list.push_back({dist[LS[i][j]][i], i});
                 dis_allowed_mx_1[LS[i][j]] = min(dis_allowed_mx_1[LS[i][j]], dist[LS[i][j]][i]);
-                cost_list_1[LS[i][j]].push_back({dist[LS[i][j]][i], i});
             }
 
         for(int i = 1; i <= g - 1; i++)
-            sort(cost_list_1[i].begin() + 1, cost_list_1[i].end());
+            while(!cost_list_1[i].empty() && cost_list_1[i].back().first > min_full_cover*(g - 1))
+                cost_list_1[i].pop_back();
 
-        sort(cost_list.begin() + 1, cost_list.end());
+        auto Build_cost_list = [&]()
+        {
+            vector <int> pos(g + 1, 1);
+            auto cmp = [&](const pair<int, int>& a, const pair<int, int>& b) {
+                return cost_list_1[a.second][a.first].first > cost_list_1[b.second][b.first].first;
+            };
+            priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(cmp)> pq(cmp);
+            auto ins = [&](int i)
+            {
+                if(pos[i] < (int)cost_list_1[i].size())
+                    pq.push({pos[i]++, i});
+            };
+            for(int i = 1; i <= g - 1; i++)
+                ins(i);
+            while(!pq.empty())
+            {
+                auto [p, i] = pq.top();
+                pq.pop();
+                cost_list.push_back(cost_list_1[i][p]);
+                ins(i);
+            }
+        };
+        // Timer::start("Build_cost_list");
+        Build_cost_list();
+        // Timer::stop("Build_cost_list", LogLevel::LOG_INFO);
+
+        // Timer::start("aft");
+        
         int len = cost_list.size();
         dis_allowed_mx.resize(len);
+        
 
-        vector <priority_queue <pair<edgetype, int >, vector<pair<edgetype, int>>, greater<pair<edgetype, int>> > > pq(g);
-        vector <pair<edgetype, int> > pre_info(n + 1, {0, 0});
-        auto get_now_mi = [&]()
-        {
-            vector <edgetype> now_mi(g, INF);
-            for(int i = 1; i <= g - 1; i++)
-            {
-                while(!pq[i].empty() && pre_info[pq[i].top().second].second > i)
-                    pq[i].pop();
-                if(!pq[i].empty())
-                    now_mi[i] = pq[i].top().first;
-            }
-            return now_mi;
-        };
+        array<edgetype, 10> now_mi;
+        vector <pair<edgetype, int> > pre_info(n + 1);
+
+        for(int i = 0; i <= g - 1; i++) now_mi[i] = INF;
+
+        int useful = 0;
+
         for(int i = 1; i < len; i++)
         {
             auto [cost, u] = cost_list[i];
             pre_info[u].first += cost;
             pre_info[u].second++;
-            pq[pre_info[u].second].push({pre_info[u].first, u});
-            dis_allowed_mx[i] = get_now_mi();
+            if(now_mi[pre_info[u].second] > pre_info[u].first) useful++;
+            now_mi[pre_info[u].second] = min(now_mi[pre_info[u].second], pre_info[u].first);
+            dis_allowed_mx[i] = now_mi;
             if(cost < min_full_cover)
                 start_cur = i;
         }
+        // cout << "useful : " << useful << endl;
+        // Timer::stop("aft", LogLevel::LOG_INFO);
     };
     calc_dis_allowed_mx();
-
+    
+    // Timer::stop("initalize part 3", LogLevel::LOG_INFO);
+    
     double average_point_ratio_0 = 0, average_point_ratio_all = 0;
     vector<int> dijk_rk(n + 1, 0);
     double dijk_rk_sum = 0;
     int dijk_rk_cnt = 0;
     vector <int> cover_size_cnt(g + 1, 0);
     vector <double> cover_size_dijk(g + 1, 0);
-
+    
     edgetype now_min_ans = INF;
     
     auto add_edge = [&](int u, vector <int> &par, vector <edgetype> &weight, Tree<edgetype> &now_answer)
@@ -275,6 +312,8 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         }   
         return true; 
     };
+
+    // Timer::stop("initialize", LogLevel::LOG_INFO);
 
     for(auto r: query[0])
     {
@@ -326,10 +365,9 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                 }
                 int it = lower_bound(cost_list_2[res_uncover_2].begin() + 1, cost_list_2[res_uncover_2].end(), now_rig_mx, [&](auto x, auto y){return x.first < y;}) - cost_list_2[res_uncover_2].begin() - 1;
                 it = max(1, it);
-                now_dijk_mx = max(now_rig_mx - dis_allowed_mx_2[res_uncover_2][it].first, now_dijk_mx * 2 - dis_allowed_mx_2[res_uncover_2][it].second);
+                now_dijk_mx = max(now_rig_mx - dis_allowed_mx_2[res_uncover_2][it].first, now_rig_mx*2 - dis_allowed_mx_2[res_uncover_2][it].second);
                 return;
             }
-            
             int it = lower_bound(cost_list.begin() + 1, cost_list.end(), now_rig_mx, [&](auto x, auto y){return x.first < y;}) - cost_list.begin() - 1;
             now_dijk_mx = 0;
             it = max(1, it);
@@ -570,7 +608,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         };
         ck_no_mid_point();
     }
-    Timer::stop("MAIN", LogLevel::LOG_INFO, 0);
+    // Timer::stop("MAIN", LogLevel::LOG_INFO, 0);
 
     if(now_min_ans > min_full_cover*(g - 1))
     {
@@ -583,7 +621,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     }
 
 
-    // Log::debug("n: " + to_string(n) + " g: " + to_string(g));
+    // Log::info("n: " + to_string(n) + " g: " + to_string(g));
     // Log::debug("query[0].size(): " + to_string(query[0].size()));
     // for(int i = 1; i <= g; i++)
     // {
