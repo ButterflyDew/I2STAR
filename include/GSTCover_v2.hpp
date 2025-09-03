@@ -13,8 +13,8 @@ template<typename edgetype>
 Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& query) {
     Log::debug("GSTCover start");
     
-    Timer::start("initialize");
-    Timer::start("initialize part 1");
+    // Timer::start("initialize");
+    // Timer::start("initialize part 1");
     
     edgetype INF = numeric_limits<edgetype>::max();
     Tree<edgetype> answer(INF);
@@ -23,8 +23,8 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     if(g == 1) return Tree<edgetype>(0);
     vector <vector <pair <edgetype, int> > > cost_list_1(g + 1, vector <pair <edgetype, int> >(1));
     for(int i = 1; i < g; i++)
-    if(query[i].size() < query[0].size())
-    swap(query[i], query[0]);
+        if(query[i].size() < query[0].size())
+            swap(query[i], query[0]);
     
     if(query[0].size() == 0) return answer;
     
@@ -36,7 +36,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     for(int i = 0; i < g; i++)
     {
         for(auto x : query[i])
-        cover_weight[x] ++;
+            cover_weight[x] ++;
     }
     sort(query[0].begin(), query[0].end(), [&](int i, int j){return cover_weight[i] > cover_weight[j];});
     if(cover_weight[query[0][0]] == g) return Tree<edgetype>(0);
@@ -105,14 +105,14 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         }
     };
 
-    Timer::start("calc_dist");
+    // Timer::start("calc_dist");
     calc_dist();
-    Timer::stop("calc_dist", LogLevel::LOG_INFO);
+    // Timer::stop("calc_dist", LogLevel::LOG_INFO);
     
-    Timer::stop("initialize part 1", LogLevel::LOG_INFO);
+    // Timer::stop("initialize part 1", LogLevel::LOG_INFO);
     
     
-    Timer::start("initalize part 2");
+    // Timer::start("initalize part 2");
     vector<vector<int>> rk(n + 1, vector<int>(g));
     for(int c = 1; c <= n; c++)
     {
@@ -129,8 +129,8 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     vector <int> deg(n + 1, 0);
     vector <vector <int> > cover_groups(n + 1);
     for(int i = 0; i < g; i++)
-    for(auto x : query[i])
-    cover_groups[x].push_back(i);
+        for(auto x : query[i])
+            cover_groups[x].push_back(i);
     
     // Timer::start("MAIN");
     
@@ -155,9 +155,9 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     };
     calc_min_full_cover();
     
-    Timer::stop("initalize part 2", LogLevel::LOG_INFO);
+    // Timer::stop("initalize part 2", LogLevel::LOG_INFO);
     
-    Timer::start("initalize part 3");
+    // Timer::start("initalize part 3");
 
     vector <pair<edgetype, int> > cost_list(1);
     vector < vector <edgetype> > dis_allowed_mx(g + 1);
@@ -168,7 +168,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     vector <pair<int, int> > f_idx(g*(g + 1)/2 + 1, {0, 0});
     int idx_cnt = 0;
     for(int i = 1; i <= g; i++) for(int j = i + 1; j <= g; j++)
-    idx[j][i] = idx[i][j] = ++idx_cnt, f_idx[idx_cnt] = {i, j};
+        idx[j][i] = idx[i][j] = ++idx_cnt, f_idx[idx_cnt] = {i, j};
     vector <int> used_idx(idx_cnt + 1, 0);
     auto build_list_2 = [&](int i)
     {
@@ -258,11 +258,11 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                 ins(i);
             }
         };
-        Timer::start("Build_cost_list");
+        // Timer::start("Build_cost_list");
         Build_cost_list();
-        Timer::stop("Build_cost_list", LogLevel::LOG_INFO);
+        // Timer::stop("Build_cost_list", LogLevel::LOG_INFO);
 
-        Timer::start("aft");
+        // Timer::start("aft");
         
         int len = cost_list.size();
 
@@ -291,11 +291,11 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                 }    
             }
         }
-        Timer::stop("aft", LogLevel::LOG_INFO);
+        // Timer::stop("aft", LogLevel::LOG_INFO);
     };
     calc_dis_allowed_mx();
     
-    Timer::stop("initalize part 3", LogLevel::LOG_INFO);
+    // Timer::stop("initalize part 3", LogLevel::LOG_INFO);
     
     double average_point_ratio_0 = 0, average_point_ratio_all = 0;
     vector<int> dijk_rk(n + 1, 0);
@@ -318,9 +318,9 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         return true; 
     };
 
-    Timer::stop("initialize", LogLevel::LOG_INFO);
+    // Timer::stop("initialize", LogLevel::LOG_INFO);
 
-    Timer::start("MAIN");
+    // Timer::start("MAIN");
 
     for(auto r: query[0])
     {
@@ -514,8 +514,10 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
                                 prev_uncover[j] += 1;
                             }
                             else 
+                            {
                                 --best[j];
-                            break;
+                                break;
+                            }    
                         }
                     }
                 }
@@ -607,7 +609,7 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
         };
         ck_no_mid_point();
     }
-    Timer::stop("MAIN", LogLevel::LOG_INFO);
+    // Timer::stop("MAIN", LogLevel::LOG_INFO);
 
     if(now_min_ans > min_full_cover*(g - 1))
     {
@@ -620,15 +622,15 @@ Tree<edgetype> gst_cover_v2(const Graph<edgetype>& graph, vector<vector<int>>& q
     }
 
 
-    Log::info("n: " + to_string(n) + " g: " + to_string(g));
+    // Log::info("n: " + to_string(n) + " g: " + to_string(g));
     // Log::debug("query[0].size(): " + to_string(query[0].size()));
     // for(int i = 1; i <= g; i++)
     // {
     //     Log::info("cover_size_cnt[" + to_string(i) + "]: " + to_string(cover_size_cnt[i]));
     //     Log::info("cover_size_dijk[" + to_string(i) + "]: " + to_string(cover_size_dijk[i] / cover_size_cnt[i]));
     // }
-    Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
-    Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
+    // Log::info("average_point_ratio_all: " + to_string(average_point_ratio_all / query[0].size()));
+    // Log::info("dijk_rk_sum: " + to_string(dijk_rk_sum / dijk_rk_cnt));
     // int used_idx_cnt = 0;
     // for(int i = 1; i <= idx_cnt; i++)
     //     if(used_idx[i])

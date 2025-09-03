@@ -24,6 +24,9 @@ test_gstcover: tests/test_GSTCover.cpp src/GlobalUtils.cpp
 test_gstcover_v2: tests/test_GSTCover_v2.cpp src/GlobalUtils.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DDEBUG -o test_gstcover_v2 tests/test_GSTCover_v2.cpp src/GlobalUtils.cpp src/Log.cpp
 
+test_i2s: tests/test_Improved2star.cpp src/GlobalUtils.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -DDEBUG -o test_i2s tests/test_Improved2star.cpp src/GlobalUtils.cpp src/Log.cpp
+
 test_log: tests/test_Log.cpp src/Log.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -DDEBUG -o test_log tests/test_Log.cpp src/Log.cpp
 
